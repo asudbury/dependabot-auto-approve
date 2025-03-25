@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Fetching repositories..."
-          REPOS_JSON=$(gh repo list --json fullName,owner --jq '.[] | {full_name: .fullName, owner: .owner.login}' --limit 1000)
+          REPOS_JSON=$(gh repo list --json name,owner --jq '.[] | {full_name: (.owner.login + "/" + .name), owner: .owner.login}' --limit 1000)
           echo "Repositories fetched:"
           echo "$REPOS_JSON"
           
