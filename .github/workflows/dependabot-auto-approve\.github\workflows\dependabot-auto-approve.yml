@@ -12,27 +12,54 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install GitHub CLI
+        run: |
+          echo "Installing GitHub CLI..."
+          sudo apt update && sudo apt install -y gh
+
+      - name: Authenticate GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "Authenticating GitHub CLI..."
+          gh auth status || exit 1
+
       - name: Get all repositories dynamically
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Fetching repositories..."
-
-          # Get all repositories from your user/org
-          REPOS=$(gh repo list --json name,owner --jq '.[].full_name' --limit 1000)
-
+          REPOS_JSON=$(gh repo list --json name,owner --jq '.[] | {full_name: .full_name, owner: .owner.login}' --limit 1000)
+          echo "Repositories fetched:"
+          echo "$REPOS_JSON"
+          
+          if [[ -z "$REPOS_JSON" ]]; then
+            echo "No repositories found. Exiting."
+            exit 0
+          fi
+          
           echo "Processing repositories..."
-          for REPO in $REPOS; do
-            echo "Checking $REPO for Dependabot PRs..."
+          echo "$REPOS_JSON" | jq -c '.[]' | while read repo; do
+            REPO_NAME=$(echo "$repo" | jq -r '.full_name')
+            OWNER=$(echo "$repo" | jq -r '.owner')
+            echo "Checking repository: $REPO_NAME (Owner: $OWNER) for Dependabot PRs..."
 
             # Get open Dependabot PRs
-            PRS=$(gh pr list -R "$REPO" --state open --json number,author --jq '.[] | select(.author.login=="dependabot[bot]") | .number')
-
+            PRS=$(gh pr list -R "$REPO_NAME" --state open --json number,author --jq '.[] | select(.author.login=="dependabot[bot]") | .number')
+            
+            if [[ -z "$PRS" ]]; then
+              echo "No open Dependabot PRs found for $REPO_NAME. Skipping."
+              continue
+            fi
+            
+            echo "Dependabot PRs found for $REPO_NAME (Owner: $OWNER):"
+            echo "$PRS"
+            
             for PR in $PRS; do
-              echo "Approving PR #$PR in $REPO..."
-              gh pr review -R "$REPO" --approve "$PR"
+              echo "Approving PR #$PR in $REPO_NAME (Owner: $OWNER)..."
+              gh pr review -R "$REPO_NAME" --approve "$PR" && echo "PR #$PR approved."
 
-              echo "Merging PR #$PR in $REPO..."
-              gh pr merge -R "$REPO" --auto --squash "$PR"
+              echo "Merging PR #$PR in $REPO_NAME (Owner: $OWNER)..."
+              gh pr merge -R "$REPO_NAME" --auto --squash "$PR" && echo "PR #$PR merged."
             done
           done
