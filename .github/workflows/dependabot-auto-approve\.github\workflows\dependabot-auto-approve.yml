@@ -19,7 +19,7 @@ jobs:
           echo "Fetching repositories..."
 
           # Get all repositories from your user/org
-          REPOS=$(gh repo list --visibility all --json name,owner --jq '.[].full_name')
+          REPOS=$(gh repo list --json name,owner --jq '.[].full_name' --limit 1000)
 
           echo "Processing repositories..."
           for REPO in $REPOS; do
