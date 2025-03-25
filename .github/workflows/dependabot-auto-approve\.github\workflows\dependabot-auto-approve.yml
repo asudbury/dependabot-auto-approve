@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Fetching repositories..."
-          REPOS_JSON=$(gh repo list --json name,owner --jq '.[] | {full_name: .full_name, owner: .owner.login}' --limit 1000)
+          REPOS_JSON=$(gh repo list --json fullName,owner --jq '.[] | {full_name: .fullName, owner: .owner.login}' --limit 1000)
           echo "Repositories fetched:"
           echo "$REPOS_JSON"
           
@@ -39,9 +39,15 @@ jobs:
           fi
           
           echo "Processing repositories..."
-          echo "$REPOS_JSON" | jq -c '.[]' | while read repo; do
+          echo "$REPOS_JSON" | jq -c '.' | while read -r repo; do
             REPO_NAME=$(echo "$repo" | jq -r '.full_name')
             OWNER=$(echo "$repo" | jq -r '.owner')
+            
+            if [[ "$REPO_NAME" == "null" || "$OWNER" == "null" ]]; then
+              echo "Skipping invalid repository entry: $repo"
+              continue
+            fi
+            
             echo "Checking repository: $REPO_NAME (Owner: $OWNER) for Dependabot PRs..."
 
             # Get open Dependabot PRs
