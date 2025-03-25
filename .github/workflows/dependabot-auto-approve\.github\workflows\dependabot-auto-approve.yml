@@ -51,7 +51,7 @@ jobs:
             echo "Checking repository: $REPO_NAME (Owner: $OWNER) for Dependabot PRs..."
 
             # Get open Dependabot PRs
-            PRS=$(gh pr list -R "$REPO_NAME" --state open --json number,author --jq '.[] | select(.author.login=="dependabot[bot]") | .number')
+            PRS=$(gh pr list -R "$REPO_NAME" --state open --json number,author --jq '.[] | .number')
             
             if [[ -z "$PRS" ]]; then
               echo "No open Dependabot PRs found for $REPO_NAME. Skipping."
