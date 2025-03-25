@@ -1,0 +1,38 @@
+name: Dependabot Auto-Approve Across All Repos
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs once daily at midnight UTC
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get all repositories dynamically
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "Fetching repositories..."
+
+          # Get all repositories from your user/org
+          REPOS=$(gh repo list --visibility all --json name,owner --jq '.[].full_name')
+
+          echo "Processing repositories..."
+          for REPO in $REPOS; do
+            echo "Checking $REPO for Dependabot PRs..."
+
+            # Get open Dependabot PRs
+            PRS=$(gh pr list -R "$REPO" --state open --json number,author --jq '.[] | select(.author.login=="dependabot[bot]") | .number')
+
+            for PR in $PRS; do
+              echo "Approving PR #$PR in $REPO..."
+              gh pr review -R "$REPO" --approve "$PR"
+
+              echo "Merging PR #$PR in $REPO..."
+              gh pr merge -R "$REPO" --auto --squash "$PR"
+            done
+          done
