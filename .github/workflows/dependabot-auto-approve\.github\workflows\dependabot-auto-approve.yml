@@ -1,9 +1,10 @@
 name: Dependabot Auto-Approve Across All Repos
 
 on:
-  schedule:
-    - cron: '0 0 * * *'  # Runs once daily at midnight UTC
+  # schedule:
+  #   - cron: '0 0 * * *'  # Runs once daily at midnight UTC - Paused temporarily
   workflow_dispatch:  # Allows manual triggering
+
 
 jobs:
   auto-approve:
